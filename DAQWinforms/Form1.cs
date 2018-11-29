@@ -14,7 +14,7 @@ using LiveCharts.Wpf;
 using LiveCharts.WinForms;
 using LiveCharts.Configurations;
 using System.Web.Script.Serialization;
-//using System.Threading;
+using System.Threading;
 
 
 namespace DAQWinforms
@@ -59,16 +59,16 @@ namespace DAQWinforms
             });
 
             SetAxisLimits(System.DateTime.Now);
-            Timer = new Timer
+            Timer = new System.Windows.Forms.Timer
             {
-                Interval = 1900
+                Interval = 2000
             };
             //The next code simulates data changes every 500 ms
             Timer.Tick += TimerOnTick;
             Timer.Start();
-            //Thread listenThread;
-            //listenThread = new Thread(new ThreadStart(StartListener));
-            //listenThread.Start();
+            Thread listenThread;
+            listenThread = new Thread(new ThreadStart(StartListener));
+            listenThread.Start();
         }
         public System.Windows.Forms.Timer Timer { get; set; }
 
@@ -77,46 +77,46 @@ namespace DAQWinforms
         private void SetAxisLimits(System.DateTime now)
         {
             cartesianChart1.AxisX[0].MaxValue = now.Ticks + TimeSpan.FromSeconds(1).Ticks; // lets force the axis to be 100ms ahead
-            cartesianChart1.AxisX[0].MinValue = now.Ticks - TimeSpan.FromSeconds(60).Ticks; //we only care about the last 8 seconds
+            cartesianChart1.AxisX[0].MinValue = now.Ticks - TimeSpan.FromSeconds(20).Ticks; //we only care about the last 8 seconds
         }
 
         private void TimerOnTick(object sender, EventArgs eventArgs)
         {
-            UdpClient listener = new UdpClient(listenPort);
-            IPEndPoint groupEP = new IPEndPoint(IPAddress.Any, listenPort);
-            JavaScriptSerializer ser = new JavaScriptSerializer();
-            var now = System.DateTime.Now;
-            bool searching = true;
-            SensorObj temp = new SensorObj();
-            //double R = 0;
-            try
-            {
-                while (searching)
-                {
-                    byte[] bytes = listener.Receive(ref groupEP);
-                    sensor1 = ser.Deserialize<SensorObj>(Encoding.ASCII.GetString(bytes, 0, bytes.Length));
-                    if (sensor1.sensorID == "1" && sensor1.sensor == "temp")
-                    {
-                        ChartValues.Add(new MeasureModel
-                        {
-                            DateTime = now,
-                            Value = sensor1.value
-                        });
-                        searching = false;
-                    }
-                }
-            }
-            catch (SocketException e)
-            {
-                Console.WriteLine(e);
-            }
-            finally
-            {
-                listener.Close();
-            }
+            //UdpClient listener = new UdpClient(listenPort);
+            //IPEndPoint groupEP = new IPEndPoint(IPAddress.Any, listenPort);
+            //JavaScriptSerializer ser = new JavaScriptSerializer();
+            //bool searching = true;
+            //SensorObj temp = new SensorObj();
+            ////double R = 0;
+            //try
+            //{
+            //    while (searching)
+            //    {
+            //        var now = System.DateTime.Now;
+            //        byte[] bytes = listener.Receive(ref groupEP);
+            //        sensor1 = ser.Deserialize<SensorObj>(Encoding.ASCII.GetString(bytes, 0, bytes.Length));
+            //        if (sensor1.sensorID == "1" && sensor1.sensor == "temp")
+            //        {
+            //            ChartValues.Add(new MeasureModel
+            //            {
+            //                DateTime = now,
+            //                Value = sensor1.value
+            //            });
+            //            searching = false;
+            //        }
+            //    }
+            //}
+            //catch (SocketException e)
+            //{
+            //    Console.WriteLine(e);
+            //}
+            //finally
+            //{
+            //    listener.Close();
+            //}
 
 
-            SetAxisLimits(now);
+            SetAxisLimits(System.DateTime.Now);
 
             //lets only use the last 30 values
             if (ChartValues.Count > 30) ChartValues.RemoveAt(0);
@@ -146,6 +146,17 @@ namespace DAQWinforms
                     string temp = Encoding.ASCII.GetString(bytes, 0, bytes.Length);
                     Console.WriteLine(temp);
                     sensor1 = ser.Deserialize<SensorObj>(temp);
+                    var now = System.DateTime.Now;
+                    if (sensor1.sensorID == "1" && sensor1.sensor == "temp")
+                    {
+                        ChartValues.Add(new MeasureModel
+                        {
+                            DateTime = now,
+                            Value = sensor1.value
+                        });
+
+                        Thread.Sleep(2000);
+                    }
                     //Console.WriteLine("Sensor:" + sensor1.ToString());
 
                     //TODO: Change this to reflect code recieved from UDP.
